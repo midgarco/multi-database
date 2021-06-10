@@ -12,7 +12,14 @@ func GetList(ctx context.Context, clientId int) ([]map[string]interface{}, error
 	results := []map[string]interface{}{}
 	errs := &multierror.Error{}
 
-	out := warehouse.GetRoleList(context.Background(), nil, nil)
+	// build up parameter list
+	params := make(map[string]interface{})
+	params["client_id"] = clientId
+
+	out, err := warehouse.GetRoleList(context.Background(), params, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	for data := range out {
 		fmt.Println(data)

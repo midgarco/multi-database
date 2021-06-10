@@ -8,7 +8,19 @@ import (
 	"github.com/apex/log"
 )
 
-type SqlServer struct{}
+type SqlServer struct {
+}
+
+// Healthy check method to be compatible with the store.Interface
+func (db *SqlServer) Healthy() error {
+	// check the db connection
+	return nil
+}
+
+//
+func (db *SqlServer) GetModuleType() ModuleType {
+	return ModuleType_DB
+}
 
 func (db *SqlServer) GetRoleList(ctx context.Context, params map[string]interface{}) (*Data, error) {
 	log.Info("sql server get role list")

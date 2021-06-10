@@ -9,6 +9,18 @@ import (
 
 type DynamoDB struct{}
 
+//
+func (db *DynamoDB) Healthy() error {
+	// check the db connection
+	return nil
+}
+
+//
+func (db *DynamoDB) GetModuleType() ModuleType {
+	return ModuleType_DB
+}
+
+//
 func (db *DynamoDB) GetRoleList(ctx context.Context, params map[string]interface{}) (*Data, error) {
 	log.Info("dynamo get role list")
 

@@ -2,6 +2,7 @@ package warehouse
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -11,30 +12,78 @@ import (
 
 var mgr *manager = &manager{}
 
-func AddConnection(name string, conn stores.Modules) {
+func AddConnection(name string, conn stores.Module) {
 	mgr.mu.Lock()
 	defer mgr.mu.Unlock()
 	if mgr.dbs == nil {
-		mgr.dbs = make(map[string]stores.Modules)
+		mgr.dbs = make(map[string]stores.Module)
 	}
 	mgr.dbs[name] = conn
 }
 
-func GetRoleList(ctx context.Context, params map[string]interface{}, opts *Options) <-chan *stores.Data {
+func GetRoleList(ctx context.Context, params map[string]interface{}, opts *Options) (<-chan *stores.Data, error) {
 	out := make(chan *stores.Data, 1)
+
+	// pull out the client id from the params
+	clientId, ok := params["client_id"].(int)
+	if !ok {
+		return nil, errors.New("missing client_id parameter")
+	}
+	limit := 10000
+
+	start := 0
 
 	go func() {
 		defer close(out)
 
 		// if we have a specific database to call
 		if opts != nil && opts.PreferredDatabase != "" {
-			db := mgr.dbs[opts.PreferredDatabase]
-			data, err := db.GetRoleList(ctx, params)
-			if err != nil {
-				log.WithError(err).Error("failed to get roles for " + fmt.Sprintf("%T", db))
+			dbint := mgr.GetPreferredDatabase(clientId, opts.PreferredDatabase)
+
+			// adjust to the correct service interface
+			db, ok := dbint.(stores.UserManager)
+			if !ok {
+				err := errors.New("preferred db does not satisfy the UserManager interface")
+				out <- &stores.Data{Error: err}
+				log.WithError(err).Error("failed to get preferred database")
 				return
 			}
-			out <- data
+
+			for {
+				end := start + limit
+
+				params["start"] = start
+				params["end"] = end
+
+				data, err := db.GetRoleList(ctx, params)
+				if err != nil {
+					log.WithError(err).Error("failed to get roles for " + fmt.Sprintf("%T", db))
+					break
+				}
+				out <- data
+
+				// check for data
+				hasData := false
+				if len(data.Results) > 0 {
+					hasData = true
+				}
+
+				if !hasData {
+					log.WithFields(log.Fields{
+						"client_id": clientId,
+						"start":     start,
+						"end":       end,
+					}).Debug("no results")
+					break
+				}
+
+				if data.NextToken != "" {
+					params["next_token"] = data.NextToken
+				}
+
+				start = end
+			}
+
 			return
 		}
 
@@ -44,18 +93,53 @@ func GetRoleList(ctx context.Context, params map[string]interface{}, opts *Optio
 		wg := sync.WaitGroup{}
 
 		// fan out to all connected databases and wait for first return
-		for name, conn := range mgr.dbs {
+		for _, conn := range mgr.GetAllConnections(clientId) {
 			wg.Add(1)
-			log.Info("calling database: " + name)
-			go func(db stores.Modules) {
+			go func(dbint stores.Interface) {
 				defer wg.Done()
-				data, err := db.GetRoleList(ctx, params)
-				if err != nil {
-					log.WithError(err).Error("failed to get roles for " + fmt.Sprintf("%T", db))
+				defer cancel()
+
+				// adjust to the correct service interface
+				db, ok := dbint.(stores.UserManager)
+				if !ok {
 					return
 				}
-				out <- data
-				cancel()
+
+				for {
+					end := start + limit
+
+					params["start"] = start
+					params["end"] = end
+
+					// get the data
+					data, err := db.GetRoleList(ctx, params)
+					if err != nil {
+						log.WithError(err).Error("failed to get roles for " + fmt.Sprintf("%T", db))
+						break
+					}
+					out <- data
+
+					// check for data
+					hasData := false
+					if data != nil && len(data.Results) > 0 {
+						hasData = true
+
+						if data.NextToken != "" {
+							params["next_token"] = data.NextToken
+						}
+					}
+
+					if !hasData {
+						log.WithFields(log.Fields{
+							"client_id": clientId,
+							"start":     start,
+							"end":       end,
+						}).Debug("no results")
+						break
+					}
+
+					start = end
+				}
 			}(conn)
 		}
 
@@ -63,6 +147,6 @@ func GetRoleList(ctx context.Context, params map[string]interface{}, opts *Optio
 		wg.Wait()
 	}()
 
-	// return results
-	return out
+	// return result channel
+	return out, nil
 }

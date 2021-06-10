@@ -1,23 +1,37 @@
 package stores
 
-import "context"
+import (
+	"context"
+)
 
 type (
 	Interface interface {
+		GetModuleType() ModuleType
 		Healthy() error
 	}
 
-	Modules interface {
+	Cacher interface {
+		GetConnection(key string) (Module, error)
+	}
+
+	Module interface {
+		Interface
 		UserManager
 	}
 
 	UserManager interface {
-		// GetRoleById(ctx context.Context, roleId int) (*Data, error)
-		// GetRoleByName(ctx context.Context, roleName string) (*Data, error)
 		GetRoleList(ctx context.Context, params map[string]interface{}) (*Data, error)
-		// GetUserById(ctx context.Context, userId int) (*Data, error)
-		// GetUserList(ctx context.Context, params map[string]interface{}) (*Data, error)
-		// CreateUser(ctx context.Context, user map[string]interface{}) (*Data, error)
-		// UpdateUser(ctx context.Context, user map[string]interface{}) (*Data, error)
 	}
 )
+
+type ModuleType string
+
+var (
+	ModuleType_DB    ModuleType = "db"
+	ModuleType_Cache ModuleType = "cache"
+)
+
+//
+func (mt ModuleType) String() string {
+	return string(mt)
+}
