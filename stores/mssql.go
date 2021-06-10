@@ -10,10 +10,10 @@ import (
 
 type SqlServer struct{}
 
-func (db *SqlServer) GetRoleList(ctx context.Context, params map[string]interface{}) ([]map[string]interface{}, error) {
+func (db *SqlServer) GetRoleList(ctx context.Context, params map[string]interface{}) (*Data, error) {
 	log.Info("sql server get role list")
 
-	var results []map[string]interface{}
+	var results Data
 	var err error
 
 	// testing errors
@@ -36,7 +36,7 @@ func (db *SqlServer) GetRoleList(ctx context.Context, params map[string]interfac
 			return nil, nil
 		case <-done:
 			log.Info("sql server role list results")
-			return results, err
+			return &results, err
 		}
 	}
 }

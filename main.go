@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/apex/log"
+	"github.com/midgarco/multi-database/entity"
 	"github.com/midgarco/multi-database/stores"
 	"github.com/midgarco/multi-database/warehouse"
 )
@@ -15,7 +16,7 @@ func main() {
 	msql := &stores.SqlServer{}
 	warehouse.AddConnection("mssql", msql)
 
-	results, err := warehouse.GetRoleList(context.Background(), nil, nil)
+	results, err := entity.GetList(context.Background(), 3)
 	if err != nil {
 		panic(err)
 	}
