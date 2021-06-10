@@ -12,7 +12,7 @@ type DynamoDB struct{}
 func (db *DynamoDB) GetRoleList(ctx context.Context, params map[string]interface{}) (*Data, error) {
 	log.Info("dynamo get role list")
 
-	var results Data
+	var data Data
 	var err error
 
 	done := make(chan bool)
@@ -32,7 +32,7 @@ func (db *DynamoDB) GetRoleList(ctx context.Context, params map[string]interface
 			return nil, nil
 		case <-done:
 			log.Info("dynamo role list results")
-			return &results, err
+			return &data, err
 		}
 	}
 }

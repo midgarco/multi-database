@@ -13,7 +13,7 @@ type SqlServer struct{}
 func (db *SqlServer) GetRoleList(ctx context.Context, params map[string]interface{}) (*Data, error) {
 	log.Info("sql server get role list")
 
-	var results Data
+	var data Data
 	var err error
 
 	// testing errors
@@ -36,7 +36,7 @@ func (db *SqlServer) GetRoleList(ctx context.Context, params map[string]interfac
 			return nil, nil
 		case <-done:
 			log.Info("sql server role list results")
-			return &results, err
+			return &data, err
 		}
 	}
 }
