@@ -7,6 +7,7 @@ import (
 type (
 	Interface interface {
 		GetModuleType() ModuleType
+		GetDatabaseType() DatabaseType
 		Healthy() error
 	}
 
@@ -16,11 +17,8 @@ type (
 
 	Module interface {
 		Interface
-		UserManager
-	}
 
-	UserManager interface {
-		GetRoleList(ctx context.Context, params map[string]interface{}) (*Data, error)
+		GetEntityList(ctx context.Context, params map[string]interface{}) *Data
 	}
 )
 
@@ -34,4 +32,17 @@ var (
 //
 func (mt ModuleType) String() string {
 	return string(mt)
+}
+
+// ## DatabaseType
+type DatabaseType string
+
+var (
+	DatabaseType_DynamoDB  DatabaseType = "dynamodb"
+	DatabaseType_SqlServer DatabaseType = "mssql"
+)
+
+//
+func (dt DatabaseType) String() string {
+	return string(dt)
 }

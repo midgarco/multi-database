@@ -34,7 +34,7 @@ func (c *Cache) GetConnection(key string) (stores.Module, error) {
 //
 func (c *Cache) Healthy() error {
 	var err error
-	c.Range(func(clientId, conn interface{}) bool {
+	c.Range(func(connId, conn interface{}) bool {
 		db := conn.(*stores.SqlServer)
 		err = db.Healthy()
 		return err == nil

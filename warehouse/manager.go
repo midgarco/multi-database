@@ -8,16 +8,29 @@ import (
 )
 
 type manager struct {
-	dbs map[string]stores.Module
+	dbs map[string]stores.Interface
 	mu  sync.Mutex
 }
 
-type Options struct {
-	PreferredDatabase string
+//
+func (m *manager) GetConnections(connId int, opts *Options) []stores.Interface {
+	// don't need the mutex here since we utilize
+	// calls that already handle it
+
+	list := []stores.Interface{}
+	if opts != nil && len(opts.PreferredDatabase) > 0 {
+		for _, pref := range opts.PreferredDatabase {
+			dbint := m.GetDatabase(connId, pref.String())
+			list = append(list, dbint)
+		}
+	} else {
+		list = m.GetAllConnections()
+	}
+	return list
 }
 
 //
-func (m *manager) GetAllConnections(clientId int) []stores.Interface {
+func (m *manager) GetAllConnections() []stores.Interface {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -40,17 +53,20 @@ func (m *manager) GetAllConnections(clientId int) []stores.Interface {
 }
 
 //
-func (m *manager) GetPreferredDatabase(clientId int, preferred string) stores.Module {
-	dbint := m.dbs[preferred]
+func (m *manager) GetDatabase(connId int, name string) stores.Module {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-	// if this is a cached type database, pull out the clientId specific connection
+	dbint := m.dbs[name]
+
+	// if this is a cached type database, pull out the specific connection
 	if dbint.GetModuleType() == stores.ModuleType_Cache {
 		if _, ok := dbint.(stores.Cacher); !ok {
 			return nil
 		}
 		db, err := dbint.(stores.Cacher).GetConnection("connection_one")
 		if err != nil {
-			log.WithError(err).Error("failed to get preferred connection")
+			log.WithError(err).Error("failed to get name connection")
 			return nil
 		}
 		return db.(stores.Module)

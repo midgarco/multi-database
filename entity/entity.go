@@ -5,18 +5,23 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/midgarco/multi-database/stores"
 	"github.com/midgarco/multi-database/warehouse"
 )
 
-func GetList(ctx context.Context, clientId int) ([]map[string]interface{}, error) {
+func GetList(ctx context.Context, connectionId int) ([]map[string]interface{}, error) {
 	results := []map[string]interface{}{}
 	errs := &multierror.Error{}
 
 	// build up parameter list
 	params := make(map[string]interface{})
-	params["client_id"] = clientId
+	params["connection_id"] = connectionId
 
-	out, err := warehouse.GetRoleList(context.Background(), params, nil)
+	// set the warehouse preferred options
+	opts := &warehouse.Options{}
+	opts.AddPreferredDatabase(stores.DatabaseType_DynamoDB)
+
+	out, err := warehouse.GetEntityList(context.Background(), params, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -24,5 +29,6 @@ func GetList(ctx context.Context, clientId int) ([]map[string]interface{}, error
 	for data := range out {
 		fmt.Println(data)
 	}
+
 	return results, errs.ErrorOrNil()
 }

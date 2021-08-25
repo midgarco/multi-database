@@ -11,7 +11,7 @@ import (
 
 func main() {
 	ddb := &stores.DynamoDB{}
-	warehouse.AddConnection("dynamo", ddb)
+	warehouse.AddConnection("dynamodb", ddb)
 
 	msql := &stores.SqlServer{}
 	warehouse.AddConnection("mssql", msql)

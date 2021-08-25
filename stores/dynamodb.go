@@ -21,11 +21,15 @@ func (db *DynamoDB) GetModuleType() ModuleType {
 }
 
 //
-func (db *DynamoDB) GetRoleList(ctx context.Context, params map[string]interface{}) (*Data, error) {
-	log.Info("dynamo get role list")
+func (db *DynamoDB) GetDatabaseType() DatabaseType {
+	return DatabaseType_DynamoDB
+}
+
+//
+func (db *DynamoDB) GetEntityList(ctx context.Context, params map[string]interface{}) *Data {
+	log.Info("dynamo get entity list")
 
 	var data Data
-	var err error
 
 	done := make(chan bool)
 	go func() {
@@ -37,14 +41,17 @@ func (db *DynamoDB) GetRoleList(ctx context.Context, params map[string]interface
 		close(done)
 	}()
 
+LOOP:
 	for {
 		select {
 		case <-ctx.Done():
 			log.Info("dynamo context done")
-			return nil, nil
+			break LOOP
 		case <-done:
 			log.Info("dynamo role list results")
-			return &data, err
+			break LOOP
 		}
 	}
+
+	return &data
 }
